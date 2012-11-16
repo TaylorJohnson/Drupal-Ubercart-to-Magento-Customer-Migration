@@ -1,0 +1,159 @@
+<?php
+
+/**
+ * Implementation of hook_menu().
+ */
+function user_export_menu() {
+  $items = array();
+  $items['admin/store/customers/user_export'] = array(
+    'title' => 'User Export Feed',
+    'description' => 'Export of products for user_export',
+    'page callback' => 'user_export',
+    'access arguments' => array('administer store'),
+    'type' => MENU_NORMAL_ITEM,
+  );
+  return $items ;
+}
+
+/**
+ * Create the user_export feed
+ */
+ function user_export() {
+
+     /**
+      * Convert comma to slash
+      */
+    function c2s($text) {
+      $text = explode(",", $text);
+      $text = implode("/", $text);
+    return $text;
+    }
+
+  $headers = array('Content-type' => 'text/octect-stream', 'Content-Disposition' => 'attachment;filename=data.csv');
+  
+  header('Content-Type: text/x-csv'); 
+  header('Expires: '. gmdate('D, d M Y H:i:s') .' GMT');
+  header('Content-Disposition: inline; filename="'.$_SERVER['SERVER_NAME'].'.csv"');
+  header('Cache-Control: must-revalidate, post-check=0, pre-check=0');
+  header('Pragma: public');
+ 
+ $output .= 'email,_website,_store,confirmation,created_at,created_in,disable_auto_group_change,dob,firstname,gender,group_id,lastname,middlename,password_hash,prefix,rp_token,rp_token_created_at,store_id,suffix,taxvat,website_id,password,_address_city,_address_company,_address_country_id,_address_fax,_address_firstname,_address_lastname,_address_middlename,_address_postcode,_address_prefix,_address_region,_address_street,_address_suffix,_address_telephone,_address_vat_id,_address_default_billing_,_address_default_shipping_' . "\n";
+ 
+	// SQL query to get customer details
+	$query = "SELECT DISTINCT u.mail, u.created, u.pass, o.delivery_city, o.delivery_company, o.delivery_country, o.delivery_first_name, o.delivery_last_name, o.delivery_postal_code, o.delivery_zone, o.delivery_street1, o.delivery_street2, o.delivery_phone, o.billing_city, o.billing_company, o.billing_country, o.billing_first_name, o.billing_last_name, o.billing_postal_code, o.billing_zone, o.billing_street1, o.billing_street2, o.billing_phone FROM {users} AS u LEFT JOIN {uc_orders} AS o ON o.uid = u.uid WHERE o.uid > 0";
+
+	// Execute SQL query
+	$result = db_query($query);
+
+	// Cycle through all customers
+	while ($customer = db_fetch_object($result)) {
+
+		$email = $customer->mail;
+		$created = date('Y-m-d H:i:s', $customer->created);
+		$firstname = $customer->billing_first_name;
+		$lastname = $customer->billing_last_name;
+		$password = $customer->pass . ":";
+
+		$ship_suburb = $customer->delivery_city;
+		$ship_company = $customer->delivery_company;
+		$ship_country = db_result(db_query("SELECT country_iso_code_2 FROM {uc_countries} WHERE country_id = $customer->delivery_country "));
+		$ship_firstname = $customer->delivery_first_name;
+		$ship_lastname = $customer->delivery_last_name;
+		$ship_postcode = $customer->delivery_postal_code;
+		$ship_state = db_result(db_query("SELECT zone_code FROM {uc_zones} WHERE zone_id = $customer->delivery_zone "));
+		$ship_address_1 = $customer->delivery_street1;
+		$ship_address_2 = $customer->delivery_street2;
+		$ship_phone = $customer->delivery_phone;
+		
+		$bill_suburb = $customer->billing_city;
+		$bill_company = $customer->billing_company;
+		$bill_country = db_result(db_query("SELECT country_iso_code_2 FROM {uc_countries} WHERE country_id = $customer->billing_country "));
+		$bill_firstname = $customer->billing_first_name;
+		$bill_lastname = $customer->billing_last_name;
+		$bill_postcode = $customer->billing_postal_code;
+		$bill_state = db_result(db_query("SELECT zone_code FROM {uc_zones} WHERE zone_id = $customer->billing_zone "));
+		$bill_address_1 = $customer->billing_street1;
+		$bill_address_2 = $customer->billing_street2;
+		$bill_phone = $customer->billing_phone;
+
+		// Merge address 1/2 fields with linebreak between
+		if($bill_address_2 != "") {
+			$bill_address = $bill_address_1 . "\n" . $bill_address_2;
+		}
+		if($ship_address_2 != "") {
+			$ship_address = $ship_address_1 . "\n" . $ship_address_2;
+		}
+
+		// General customer information
+		$output .= "\"" . htmlspecialchars(c2s($email)) . "\",";	// email
+		$output .= "base,";											// _website
+		$output .= "default,";										// _store
+		$output .= ",";												// confirmation
+		$output .= "\"" . $created . "\",";							// created_at
+		$output .= ",";												// created_in
+		$output .= "0,";											// disable_auto_group_change
+		$output .= ",";												// dob
+		$output .= "\"" . htmlspecialchars(c2s($firstname)) . "\",";// firstname
+		$output .= ",";												// gender
+		$output .= "1,";											// group_id
+		$output .= "\"" . htmlspecialchars(c2s($lastname)) . "\",";	// lastname
+		$output .= ",";												// middlename
+		$output .= "\"" . $password . "\",";						// password_hash
+		$output .= ",";												// prefix
+		$output .= ",";												// rp_token
+		$output .= ",";												// rp_token_created_at
+		$output .= "1,";											// store_id
+		$output .= ",";												// suffix
+		$output .= ",";												// taxvat
+		$output .= "1,";											// website_id
+		$output .= ",";												// password
+
+		// Billing address information
+		$output .= "\"" . htmlspecialchars(c2s($bill_suburb)) . "\",";		// _address_city
+		$output .= "\"" . htmlspecialchars(c2s($bill_company)) . "\",";		// _address_company
+		$output .= "\"" . htmlspecialchars(c2s($bill_country)) . "\",";		// _address_country_id
+		$output .= ",";														// _address_fax
+		$output .= "\"" . htmlspecialchars(c2s($bill_firstname)) . "\",";	// _address_firstname
+		$output .= "\"" . htmlspecialchars(c2s($bill_lastname)) . "\",";	// _address_lastname
+		$output .= ",";														// _address_middlename
+		$output .= "\"" . htmlspecialchars(c2s($bill_postcode)) . "\",";	// _address_postcode
+		$output .= ",";														// _address_prefix
+		$output .= "\"" . htmlspecialchars(c2s($bill_state)) . "\",";		// _address_region
+		$output .= "\"" . htmlspecialchars(c2s($bill_address)) . "\",";		// _address_street
+		$output .= ",";														// _address_suffix
+		$output .= "\"" . htmlspecialchars(c2s($bill_phone)) . "\",";		// _address_telephone
+		$output .= ",";														// _address_vat_id
+		$output .= "1";														// _address_default_billing
+
+		// Shipping address information
+		if($bill_address == $ship_address) {
+			$output .= ",1";													// _address_default_shipping
+		} else {
+			$output .= "\n";
+			$output .= ",,,,,,,,,,,,,,,,,,,,,,";
+			$output .= "\"" . htmlspecialchars(c2s($ship_suburb)) . "\",";		// _address_city
+			$output .= "\"" . htmlspecialchars(c2s($ship_company)) . "\",";		// _address_company
+			$output .= "\"" . htmlspecialchars(c2s($ship_country)) . "\",";		// _address_country_id
+			$output .= ",";														// _address_fax
+			$output .= "\"" . htmlspecialchars(c2s($ship_firstname)) . "\",";	// _address_firstname
+			$output .= "\"" . htmlspecialchars(c2s($ship_lastname)) . "\",";	// _address_lastname
+			$output .= ",";														// _address_middlename
+			$output .= "\"" . htmlspecialchars(c2s($ship_postcode)) . "\",";	// _address_postcode
+			$output .= ",";														// _address_prefix
+			$output .= "\"" . htmlspecialchars(c2s($ship_state)) . "\",";		// _address_region
+			$output .= "\"" . htmlspecialchars(c2s($ship_address)) . "\",";		// _address_street
+			$output .= ",";														// _address_suffix
+			$output .= "\"" . htmlspecialchars(c2s($ship_phone)) . "\",";		// _address_telephone
+			$output .= ",";														// _address_vat_id
+			$output .= ",";														// _address_default_billing
+			$output .= "1";														// _address_default_shipping
+		}
+
+		$output .= "\n";
+
+	}
+
+  echo $output;
+
+  module_invoke_all('exit');
+}
