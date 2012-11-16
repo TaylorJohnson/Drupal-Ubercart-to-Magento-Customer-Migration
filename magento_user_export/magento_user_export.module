@@ -3,12 +3,12 @@
 /**
  * Implementation of hook_menu().
  */
-function user_export_menu() {
+function magento_user_export_menu() {
   $items = array();
-  $items['admin/store/customers/user_export'] = array(
+  $items['admin/store/customers/magento_user_export'] = array(
     'title' => 'User Export Feed',
-    'description' => 'Export of products for user_export',
-    'page callback' => 'user_export',
+    'description' => 'Export of products for magento_user_export',
+    'page callback' => 'magento_user_export',
     'access arguments' => array('administer store'),
     'type' => MENU_NORMAL_ITEM,
   );
@@ -16,9 +16,9 @@ function user_export_menu() {
 }
 
 /**
- * Create the user_export feed
+ * Create the magento_user_export feed
  */
- function user_export() {
+ function magento_user_export() {
 
      /**
       * Convert comma to slash
@@ -40,7 +40,7 @@ function user_export_menu() {
  $output .= 'email,_website,_store,confirmation,created_at,created_in,disable_auto_group_change,dob,firstname,gender,group_id,lastname,middlename,password_hash,prefix,rp_token,rp_token_created_at,store_id,suffix,taxvat,website_id,password,_address_city,_address_company,_address_country_id,_address_fax,_address_firstname,_address_lastname,_address_middlename,_address_postcode,_address_prefix,_address_region,_address_street,_address_suffix,_address_telephone,_address_vat_id,_address_default_billing_,_address_default_shipping_' . "\n";
  
 	// SQL query to get customer details
-	$query = "SELECT DISTINCT u.mail, u.created, u.pass, o.delivery_city, o.delivery_company, o.delivery_country, o.delivery_first_name, o.delivery_last_name, o.delivery_postal_code, o.delivery_zone, o.delivery_street1, o.delivery_street2, o.delivery_phone, o.billing_city, o.billing_company, o.billing_country, o.billing_first_name, o.billing_last_name, o.billing_postal_code, o.billing_zone, o.billing_street1, o.billing_street2, o.billing_phone FROM {users} AS u LEFT JOIN {uc_orders} AS o ON o.uid = u.uid WHERE o.uid > 0";
+	$query = "SELECT DISTINCT u.mail, u.created, u.pass, o.delivery_city, o.delivery_company, o.delivery_country, o.delivery_first_name, o.delivery_last_name, o.delivery_postal_code, o.delivery_zone, o.delivery_street1, o.delivery_street2, o.delivery_phone, o.billing_city, o.billing_company, o.billing_country, o.billing_first_name, o.billing_last_name, o.billing_postal_code, o.billing_zone, o.billing_street1, o.billing_street2, o.billing_phone FROM {uc_orders} AS o LEFT JOIN {users} AS u ON o.uid = u.uid WHERE o.uid > 0";
 
 	// Execute SQL query
 	$result = db_query($query);
